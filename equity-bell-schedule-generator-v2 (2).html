@@ -1,0 +1,2736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equity Bell Schedule Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1e3a5f;
+            --primary-light: #2d5282;
+            --accent: #e85d26;
+            --accent-dark: #c44d1e;
+            --accent-warm: #f7a452;
+            --success: #2a7d4f;
+            --warning: #d4821a;
+            --error: #c0392b;
+            --bg: #f8f6f2;
+            --card: #ffffff;
+            --border: #ddd8cf;
+            --text: #1a1a2e;
+            --text-muted: #6b6578;
+            --highlight: #eef4fb;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 2.5rem 0;
+            border-bottom: 5px solid var(--accent);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -60px; right: -60px;
+            width: 240px; height: 240px;
+            border-radius: 50%;
+            background: rgba(232, 93, 38, 0.12);
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -80px; left: 10%;
+            width: 300px; height: 300px;
+            border-radius: 50%;
+            background: rgba(255,255,255, 0.04);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2.1rem;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+        }
+
+        .header-subtitle {
+            color: var(--accent-warm);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+        }
+
+        .header-tagline {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.9rem;
+            font-weight: 300;
+            margin-top: 0.5rem;
+        }
+
+        /* Progress Indicator */
+        .progress-section {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #e7e5e4;
+            border-radius: 100px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-warm));
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-step.active {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .progress-step.completed {
+            color: var(--success);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 3rem 0;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: var(--card);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .section-card.collapsed {
+            padding: 1.5rem 2rem;
+            cursor: pointer;
+        }
+
+        .section-card.collapsed:hover {
+            border-color: var(--accent);
+        }
+
+        .section-card.active {
+            border-color: var(--accent);
+            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.12);
+        }
+
+        .section-card.completed {
+            border-color: var(--success);
+            opacity: 0.85;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+        }
+
+        .section-card.collapsed .section-header {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .section-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .section-card.active .section-number {
+            background: var(--accent);
+        }
+
+        .section-card.completed .section-number {
+            background: var(--success);
+        }
+
+        .section-title h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.3rem;
+            font-weight: 400;
+        }
+
+        .section-content {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .section-card.collapsed .section-content {
+            display: none;
+        }
+
+        /* Form Groups */
+        .form-group {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        label {
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: var(--text);
+        }
+
+        label.required::after {
+            content: " *";
+            color: var(--error);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="time"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+            background: white;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            line-height: 1.6;
+        }
+
+        .helper-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Grade Level Table */
+        .grade-table {
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .grade-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .grade-table th,
+        .grade-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .grade-table th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .grade-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .grade-table input {
+            width: 100%;
+            padding: 0.5rem;
+        }
+
+        /* Specialist Table */
+        .specialist-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .specialist-item {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 2fr;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--highlight);
+            border-radius: 8px;
+            align-items: end;
+        }
+
+        /* Checkboxes */
+        .checkbox-group {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.875rem 1.75rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 14px rgba(232, 93, 38, 0.35);
+        }
+
+        .btn-secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: #d6d3d1;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .section-nav {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid var(--border);
+        }
+
+        /* Results Section */
+        .results-section {
+            display: none;
+            background: white;
+            border: 2px solid var(--success);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .results-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .results-header h2 {
+            font-size: 2rem;
+            color: var(--success);
+            margin-bottom: 0.5rem;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .schedule-output {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .schedule-tabs {
+            display: flex;
+            background: var(--highlight);
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .schedule-tab {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .schedule-tab:hover {
+            background: #e2e8f3;
+            color: var(--text);
+        }
+
+        .schedule-tab.active {
+            background: white;
+            color: var(--primary);
+            border-bottom-color: var(--accent);
+        }
+
+        .schedule-tab-content {
+            display: none;
+        }
+
+        .schedule-tab-content.active {
+            display: block;
+        }
+
+        .schedule-summary {
+            padding: 2rem;
+            background: var(--highlight);
+        }
+
+        .schedule-summary h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.125rem;
+        }
+
+        .schedule-summary p {
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+        }
+
+        .spreadsheet-container {
+            overflow-x: auto;
+            background: white;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .schedule-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .schedule-table th {
+            background: var(--primary);
+            color: white;
+            padding: 0.875rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid var(--primary-light);
+            white-space: nowrap;
+        }
+
+        .schedule-table th.time-col {
+            min-width: 120px;
+        }
+
+        .schedule-table th.activity-col {
+            min-width: 200px;
+        }
+
+        .schedule-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            vertical-align: top;
+            background: white;
+        }
+
+        .schedule-table tr:hover td {
+            background: #fafaf9;
+        }
+
+        .schedule-table td.time-cell {
+            font-family: 'Space Mono', monospace;
+            font-weight: 600;
+            color: var(--primary);
+            white-space: nowrap;
+        }
+
+        .schedule-table td.break-row {
+            background: #fef3c7 !important;
+            font-weight: 600;
+        }
+
+        .schedule-table td.core-instruction {
+            background: #dbeafe !important;
+        }
+
+        .schedule-table td.intervention {
+            background: #fce7f3 !important;
+        }
+
+        .schedule-table td.specialist {
+            background: #dcfce7 !important;
+        }
+
+        .schedule-table td.eld {
+            background: #fef3c7 !important;
+        }
+
+        .schedule-legend {
+            display: flex;
+            gap: 1.5rem;
+            padding: 1rem 2rem;
+            background: #f5f5f4;
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+            font-size: 0.75rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .grade-header {
+            background: var(--accent);
+            color: white;
+            padding: 1rem 2rem;
+            font-weight: 700;
+            font-size: 1rem;
+            border-bottom: 2px solid var(--accent-dark);
+        }
+
+        .notes-section {
+            padding: 1.5rem 2rem;
+            background: var(--highlight);
+            border-top: 1px solid var(--border);
+        }
+
+        .notes-section h4 {
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .notes-section ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .notes-section li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        .notes-section li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .approach-card {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .approach-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 1.5rem 2rem;
+        }
+
+        .approach-header h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .approach-header p {
+            opacity: 0.9;
+            font-size: 0.875rem;
+        }
+
+        .export-options {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .toggle-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--border);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .toggle-btn:hover:not(.active) {
+            border-color: var(--accent);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--primary);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            display: none;
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Critical Callout */
+        .critical-callout {
+            background: #fef3c7;
+            border-left: 4px solid var(--warning);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .critical-callout label {
+            color: #92400e;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .specialist-item {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.25rem;
+            }
+
+            .section-card {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Info Box */
+        .info-box {
+            background: var(--highlight);
+            border-left: 4px solid var(--primary-light);
+            padding: 1rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+        /* Roster Upload */
+        .roster-upload-zone {
+            border: 3px dashed var(--border);
+            border-radius: 12px;
+            padding: 2.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: var(--highlight);
+            cursor: pointer;
+            position: relative;
+        }
+        .roster-upload-zone:hover, .roster-upload-zone.dragover { border-color: var(--accent); background: #fdf3ee; }
+        .roster-upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+        .roster-upload-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+        .roster-upload-zone h4 { font-size: 1rem; font-weight: 600; color: var(--primary); margin-bottom: 0.4rem; }
+        .roster-upload-zone p { font-size: 0.825rem; color: var(--text-muted); }
+        .file-tag { background: var(--primary); color: white; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+        .roster-success { background: #ecfdf5; border: 2px solid var(--success); border-radius: 10px; padding: 1.25rem 1.5rem; display: none; }
+        .roster-success.show { display: block; }
+        .roster-success-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .roster-success-header strong { color: var(--success); font-size: 1rem; }
+        .roster-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
+        .roster-stat { background: white; border: 1px solid #a7f3d0; border-radius: 8px; padding: 0.75rem; text-align: center; }
+        .roster-stat .stat-number { font-size: 1.5rem; font-weight: 700; color: var(--success); line-height: 1; }
+        .roster-stat .stat-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+        .roster-preview { margin-top: 1rem; max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+        .roster-preview table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+        .roster-preview th { background: var(--primary); color: white; padding: 0.5rem 0.75rem; text-align: left; position: sticky; top: 0; }
+        .roster-preview td { padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); }
+        .roster-preview tr:nth-child(even) td { background: var(--highlight); }
+        .col-chip { display: inline-block; background: white; border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.4rem; font-family: monospace; font-size: 0.75rem; margin: 0.1rem; }
+        .roster-hint { background: #fff7ed; border-left: 3px solid var(--accent-warm); padding: 1rem; border-radius: 4px; font-size: 0.8rem; margin-bottom: 1rem; }
+        .roster-hint strong { display: block; margin-bottom: 0.4rem; color: var(--warning); }
+
+        /* Reconciliation */
+        .recon-box {
+            display: none;
+            margin-top: 1.25rem;
+            border: 2px solid var(--accent);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .recon-box.show { display: block; }
+        .recon-header {
+            background: var(--accent);
+            color: white;
+            padding: 0.875rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .recon-body {
+            padding: 1.25rem;
+            background: #fff7f4;
+        }
+        .recon-body p {
+            font-size: 0.875rem;
+            color: var(--text);
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        .recon-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .recon-option {
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            background: white;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .recon-option:hover { border-color: var(--accent); }
+        .recon-option.selected {
+            border-color: var(--accent);
+            background: #fdf3ee;
+        }
+        .recon-option .opt-number {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1;
+        }
+        .recon-option .opt-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+        .recon-option .opt-desc {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-top: 0.5rem;
+            line-height: 1.4;
+        }
+        .ghost-info {
+            background: #eef4fb;
+            border-left: 3px solid var(--primary-light);
+            padding: 0.875rem 1rem;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            color: var(--text);
+            margin-top: 0.75rem;
+            display: none;
+        }
+        .ghost-info.show { display: block; }
+        .ghost-info strong { color: var(--primary); }
+        .recon-over-warning {
+            background: #fff3cd;
+            border-left: 3px solid var(--warning);
+            padding: 0.875rem 1rem;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            margin-top: 0.75rem;
+            display: none;
+        }
+        .recon-over-warning.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="header-content">
+                <div>
+                    <div class="header-subtitle">Equity-First Scheduling Tool</div>
+                    <h1>⏰ Bell Schedule Generator</h1>
+                    <div class="header-tagline">Design master schedules that serve every student — ELs, IEP, dually identified, and all.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="progress-section">
+        <div class="container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-steps">
+                <div class="progress-step active" data-step="1">① Context</div>
+                <div class="progress-step" data-step="2">② Roster</div>
+                <div class="progress-step" data-step="3">③ Students</div>
+                <div class="progress-step" data-step="4">④ Classrooms</div>
+                <div class="progress-step" data-step="5">⑤ Staffing</div>
+                <div class="progress-step" data-step="6">⑥ Core Blocks</div>
+                <div class="progress-step" data-step="7">⑦ Constraints</div>
+                <div class="progress-step" data-step="8">⑧ Problems</div>
+                <div class="progress-step" data-step="9">⑨ Philosophy</div>
+                <div class="progress-step" data-step="10">⑩ Generate</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="main-content">
+            
+            <!-- Section 1: School Context -->
+            <div class="section-card active" data-section="1">
+                <div class="section-header" onclick="toggleSection(1)">
+                    <div class="section-title">
+                        <span class="section-number">1</span>
+                        <h2>School Context</h2>
+                    </div>
+                    <span>▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="schoolName" class="required">School Name</label>
+                            <input type="text" id="schoolName" placeholder="Lincoln Elementary School">
+                        </div>
+                        <div class="form-group">
+                            <label for="district" class="required">District</label>
+                            <input type="text" id="district" placeholder="Oakland Unified School District">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="gradeLevels" class="required">Grade Levels</label>
+                            <input type="text" id="gradeLevels" placeholder="TK-5">
+                            <div class="helper-text">e.g., TK-5, K-6</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="enrollment" class="required">Total Enrollment</label>
+                            <input type="number" id="enrollment" placeholder="450">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="startTime" class="required">School Start Time</label>
+                            <input type="time" id="startTime" value="08:00">
+                        </div>
+                        <div class="form-group">
+                            <label for="endTime" class="required">School End Time</label>
+                            <input type="time" id="endTime" value="14:30">
+                        </div>
+                        <div class="form-group">
+                            <label for="instMinutes" class="required">Instructional Minutes/Day</label>
+                            <input type="number" id="instMinutes" placeholder="330">
+                        </div>
+                    </div>
+                    <div class="section-nav">
+                        <div></div>
+                        <button class="btn btn-primary" onclick="nextSection(1)">Continue →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Roster Upload -->
+            <div class="section-card collapsed" data-section="2">
+                <div class="section-header" onclick="toggleSection(2)">
+                    <div class="section-title">
+                        <span class="section-number">2</span>
+                        <h2>Upload Roster <span style="font-size:0.75rem; font-weight:400; color:var(--text-muted); margin-left:0.5rem;">optional but recommended</span></h2>
+                    </div>
+                    <span>▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="roster-hint">
+                        <strong>📋 Why upload a roster?</strong>
+                        A roster lets the AI see your real student breakdown — grades, EL levels, IEP status, service minutes — instead of relying on totals alone. This produces far more accurate, student-specific schedules. Student names are never sent to the AI; only anonymized counts and service data are used.
+                    </div>
+
+                    <div class="roster-hint" style="background:#eef4fb; border-color: var(--primary-light);">
+                        <strong style="color:var(--primary);">📂 Expected columns (flexible — we'll map what we find):</strong>
+                        <span class="col-chip">Grade</span>
+                        <span class="col-chip">EL_Status</span>
+                        <span class="col-chip">EL_Proficiency</span>
+                        <span class="col-chip">IEP</span>
+                        <span class="col-chip">RSP_Minutes</span>
+                        <span class="col-chip">Service_Type</span>
+                        <span class="col-chip">Language</span>
+                        <span class="col-chip">Tier</span>
+                        <br><span style="color:var(--text-muted); margin-top:0.4rem; display:block;">Column names don't need to match exactly — we'll detect common variations automatically.</span>
+                    </div>
+
+                    <div class="roster-upload-zone" id="rosterDropZone">
+                        <input type="file" id="rosterFile" accept=".csv,.xlsx,.xls" onchange="handleRosterUpload(event)">
+                        <div class="roster-upload-icon">📁</div>
+                        <h4>Drop your roster file here or click to browse</h4>
+                        <p>Accepts student rosters exported from your SIS or built in Excel</p>
+                        <div style="margin-top:0.75rem;">
+                            <span class="file-tag">CSV</span>
+                            <span class="file-tag" style="margin-left:0.4rem;">XLSX</span>
+                            <span class="file-tag" style="margin-left:0.4rem;">XLS</span>
+                        </div>
+                    </div>
+
+                    <div class="roster-success" id="rosterSuccess">
+                        <div class="roster-success-header">
+                            <span>✅</span>
+                            <strong id="rosterFileName">roster.csv uploaded successfully</strong>
+                        </div>
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">Student data parsed. Fields auto-populated in Section 3. Review and adjust as needed.</p>
+                        <div class="roster-stats" id="rosterStats"></div>
+                        <div class="roster-preview" id="rosterPreview"></div>
+                        <button class="btn btn-secondary" style="margin-top:1rem; font-size:0.8rem;" onclick="clearRoster()">✕ Remove roster</button>
+
+                        <!-- Reconciliation Box -->
+                        <div class="recon-box" id="reconBox">
+                            <div class="recon-header">
+                                <span>⚠️</span>
+                                <span id="reconTitle">Enrollment mismatch — which number should we use?</span>
+                            </div>
+                            <div class="recon-body">
+                                <p id="reconDesc"></p>
+                                <div class="recon-options" id="reconOptions"></div>
+
+                                <div class="ghost-info" id="ghostInfo">
+                                    <strong>👻 Ghost spaces activated.</strong>
+                                    The AI will build a schedule with <strong id="ghostCount"></strong> reserved seats for anticipated students not yet on the roster — incoming transfers, late enrollees, or mid-year arrivals. Services will be proportionally allocated to cover these seats.
+                                </div>
+
+                                <div class="recon-over-warning" id="reconOverWarning">
+                                    <strong>⚠️ Roster exceeds expected enrollment.</strong>
+                                    Your roster has more students than the number you entered in Section 1. This may include withdrawn students, duplicates, or your enrollment has grown. The enrollment field has been updated. Double-check Section 1 before generating.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-nav">
+                        <button class="btn btn-secondary" onclick="prevSection(2)">← Back</button>
+                        <button class="btn btn-primary" onclick="nextSection(2)">Continue →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Student Population -->
+            <div class="section-card collapsed" data-section="3">
+                <div class="section-header" onclick="toggleSection(3)">
+                    <div class="section-title">
+                        <span class="section-number">2</span>
+                        <h2>Student Population</h2>
+                    </div>
+                    <span>▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="info-box">
+                        <strong>Why These Details Matter</strong>
+                        Each dually identified student needs a personalized schedule showing when they receive RSP services, Designated ELD, AND full core instruction. A 2nd grader with 240 RSP min/week + Emerging EL proficiency requires different scheduling than a 4th grader with 120 RSP min/week + Bridging proficiency. The AI needs this breakdown to create realistic, coordinated schedules.
+                    </div>
+                    
+                    <div class="info-box">
+                        <strong>English Learners & Special Education</strong>
+                        Provide accurate counts by proficiency level and service needs.
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="totalEL" class="required">Total English Learners</label>
+                        <input type="number" id="totalEL" placeholder="180">
+                    </div>
+                    
+                    <label class="required">EL Proficiency Breakdown</label>
+                    <div class="grade-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Level</th>
+                                    <th>Total Students</th>
+                                    <th>Grade Distribution</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Emerging</td>
+                                    <td><input type="number" id="emergingTotal" placeholder="60"></td>
+                                    <td><input type="text" id="emergingGrades" placeholder="K-2: 40, 3-5: 20"></td>
+                                </tr>
+                                <tr>
+                                    <td>Expanding</td>
+                                    <td><input type="number" id="expandingTotal" placeholder="80"></td>
+                                    <td><input type="text" id="expandingGrades" placeholder="K-2: 30, 3-5: 50"></td>
+                                </tr>
+                                <tr>
+                                    <td>Bridging</td>
+                                    <td><input type="number" id="bridgingTotal" placeholder="40"></td>
+                                    <td><input type="text" id="bridgingGrades" placeholder="K-2: 10, 3-5: 30"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="primaryLanguages" class="required">Primary Languages (beyond English)</label>
+                        <textarea id="primaryLanguages" placeholder="Spanish, Cantonese, Mam"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="totalIEP" class="required">Total Students with IEPs</label>
+                            <input type="number" id="totalIEP" placeholder="45">
+                        </div>
+                        <div class="form-group">
+                            <label for="serviceModels" class="required">Service Models</label>
+                            <textarea id="serviceModels" placeholder="RSP pull-out, push-in support, specialized SDC classes"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="critical-callout">
+                        <div class="form-group">
+                            <label for="duallyIdentified" class="required">🚨 Students who are BOTH EL AND have IEPs</label>
+                            <input type="number" id="duallyIdentified" placeholder="12">
+                            <div class="helper-text">Critical equity concern - these students need coordinated services</div>
+                        </div>
+                        
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label class="required">Dually Identified Student Details</label>
+                            <div class="helper-text" style="margin-bottom: 0.75rem;">For each student group, specify grade, RSP minutes, and EL proficiency level</div>
+                            <div class="grade-table">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Grade</th>
+                                            <th># Students</th>
+                                            <th>RSP Minutes/Week</th>
+                                            <th>EL Proficiency</th>
+                                            <th>Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dualStudentRows">
+                                        <tr>
+                                            <td><input type="text" class="dual-grade" placeholder="K" style="width: 60px;"></td>
+                                            <td><input type="number" class="dual-count" placeholder="2" style="width: 60px;"></td>
+                                            <td><input type="number" class="dual-rspmins" placeholder="180" style="width: 80px;"></td>
+                                            <td>
+                                                <select class="dual-elproficiency" style="width: 120px;">
+                                                    <option value="">Select...</option>
+                                                    <option value="Emerging">Emerging</option>
+                                                    <option value="Expanding">Expanding</option>
+                                                    <option value="Bridging">Bridging</option>
+                                                </select>
+                                            </td>
+                                            <td><input type="text" class="dual-notes" placeholder="e.g., speech services"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button class="btn btn-secondary" onclick="addDualRow()" style="margin-top: 0.5rem;">+ Add Student Group</button>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="dualChallenge">Current Challenge with Dually Identified Students</label>
+                            <textarea id="dualChallenge" placeholder="Describe conflicts between ELD and IEP services, or note if coordination is working well"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tier2" class="required">Tier 2 (Targeted) Students</label>
+                            <input type="number" id="tier2" placeholder="60">
+                        </div>
+                        <div class="form-group">
+                            <label for="tier3" class="required">Tier 3 (Intensive) Students</label>
+                            <input type="number" id="tier3" placeholder="25">
+                        </div>
+                    </div>
+
+                    <div class="section-nav">
+                        <button class="btn btn-secondary" onclick="prevSection(3)">← Back</button>
+                        <button class="btn btn-primary" onclick="nextSection(3)">Continue →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Grade-Level Classroom Structure -->
+            <div class="section-card collapsed" data-section="4">
+                <div class="section-header" onclick="toggleSection(4)">
+                    <div class="section-title">
+                        <span class="section-number">3</span>
+                        <h2>Grade-Level Classroom Structure</h2>
+                    </div>
+                    <span>▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="info-box">
+                        <strong>Why This Matters</strong>
+                        Knowing how many classes per grade helps design realistic specialist rotations and intervention groupings.
+                    </div>
+
+                    <label class="required">Classes per Grade Level</label>
+                    <div class="grade-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Grade</th>
+                                    <th># of Classes</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>TK</td>
+                                    <td><input type="number" id="classesTK" placeholder="2"></td>
+                                    <td><input type="text" id="notesTK" placeholder="e.g., combo TK/K"></td>
+                                </tr>
+                                <tr>
+                                    <td>Kindergarten</td>
+                                    <td><input type="number" id="classesK" placeholder="3"></td>
+                                    <td><input type="text" id="notesK" placeholder=""></td>
+                                </tr>
+                                <tr>
+                                    <td>1st Grade</td>
+                                    <td><input type="number" id="classes1" placeholder="3"></td>
+                                    <td><input type="text" id="notes1" placeholder=""></td>
+                                </tr>
+                                <tr>
+                                    <td>2nd Grade</td>
+                                    <td><input type="number" id="classes2" placeholder="3"></td>
+                                    <td><input type="text" id="notes2" placeholder=""></td>
+                                </tr>
+                                <tr>
+                                    <td>3rd Grade</td>
+                                    <td><input type="number" id="classes3" placeholder="3"></td>
+                                    <td><input type="text" id="notes3" placeholder=""></td>
+                                </tr>
+                                <tr>
+                                    <td>4th Grade</td>
+                                    <td><input type="number" id="classes4" placeholder="3"></td>
+                                    <td><input type="text" id="notes4" placeholder=""></td>
+                                </tr>
+                                <tr>
+                                    <td>5th Grade</td>
+                                    <td><input type="number" id="classes5" placeholder="2"></td>
+                                    <td><input type="text" id="notes5" placeholder=""></td>
+                                </tr>
+                                <tr>
+                                    <td>6th Grade</td>
+                                    <td><input type="number" id="classes6" placeholder="0"></td>
+                                    <td><input type="text" id="notes6" placeholder=""></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Specialized Classrooms (SDC, etc.)</label>
+                        <textarea id="specializedClassrooms" placeholder="SDC Mild/Moderate: 1 class (8 students, grades 2-4)
+SDC Autism: 1 class (6 students, grades K-2)"></textarea>
+                        <div class="helper-text">List any specialized classrooms with grade span and enrollment</div>
+                    </div>
+
+                    <div class="section-nav">
+                        <button class="btn btn-secondary" onclick="prevSection(4)">← Back</button>
+                        <button class="btn btn-primary" onclick="nextSection(4)">Continue →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 4: Staffing & Specialist Rotations -->
+            <div class="section-card collapsed" data-section="5">
+                <div class="section-header" onclick="toggleSection(5)">
+                    <div class="section-title">
+                        <span class="section-number">4</span>
+                        <h2>Staffing & Specialist Rotations</h2>
+                    </div>
+                    <span>▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="eldFTE" class="required">ELD Teachers/Specialists (FTE)</label>
+                            <input type="number" id="eldFTE" placeholder="2" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="spedFTE" class="required">Special Ed Teachers (FTE)</label>
+                            <input type="number" id="spedFTE" placeholder="2" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="interventionFTE" class="required">Intervention Specialists (FTE)</label>
+                            <input type="number" id="interventionFTE" placeholder="1" step="0.1">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Intervention Structure</label>
+                        <textarea id="interventionStructure" placeholder="Describe: Is intervention schoolwide or teacher-led? Do interventionists only support Tier 3, or do classroom teachers provide Tier 2? When does intervention happen?
+
+Example: 'School is interested in exploring a protected schoolwide intervention/WIN block across grade spans where all students receive targeted support simultaneously.'"></textarea>
+                        <div class="helper-text">Be specific about who provides intervention and when</div>
+                    </div>
+
+                    <label class="required">Specialist Teachers & Rotation Schedule</label>
+                    <div class="specialist-list" id="specialistList">
+                        <div class="specialist-item">
+                            <div class="form-group">
+                                <label>Specialist</label>
+                                <input type="text" placeholder="PE Teacher" class="specialist-name">
+                            </div>
+                            <div class="form-group">
+                                <label>FTE</label>
+                                <input type="number" step="0.1" placeholder="1.0" class="specialist-fte">
+                            </div>
+                            <div class="form-group">
+                                <label>Session Length</label>
+                                <input type="text" placeholder="40 min" class="specialist-length">
+                            </div>
+                            <div class="form-group">
+                                <label>Frequency/Schedule</label>
+                                <input type="text" placeholder="2x weekly" class="specialist-freq">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="addSpecialist()">+ Add Another Specialist</button>
+
+                    <div class="form-group">
+                        <label class="required">Do specialists provide prep coverage for classroom teachers?</label>
+                        <select id="prepCoverage">
+                            <option value="">Select...</option>
+                            <option value="yes">Yes - specialists provide prep time</option>
+                            <option value="partial">Partial - some specialists provide prep</option>
+                            <option value="no">No - separate prep time needed</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Related Services Staff</label>
+                        <textarea id="relatedServices" placeholder="Speech/Language Pathologist: 0.5 FTE, Wed/Thu only
+School Psychologist: 1.0 FTE
+Occupational Therapist: 0.2 FTE
+Counselor: 1.0 FTE"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="aidesFTE">Instructional Aides (FTE)</label>
+                        <input type="number" id="aidesFTE" placeholder="5" step="0.1">
+                    </div>
+
+                    <div class="section-nav">
+                        <button class="btn btn-secondary" onclick="prevSection(5)">← Back</button>
+                        <button class="btn btn-primary" onclick="nextSection(5)">Continue →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 5: Core Instructional Blocks -->
+            <div class="section-card collapsed" data-section="6">
+                <div class="section-header" onclick="toggleSection(6)">
+                    <div class="section-title">
+                        <span class="section-number">5</span>
+                        <h2>Core Instructional Blocks</h2>
+                    </div>
+                    <span>▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="info-box">
+                        <strong>Critical for Schedule Design</strong>
+                        Without knowing required block lengths, AI cannot create realistic schedules.
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="elaBlock" class="required">ELA Block Length (minutes)</label>
+                            <input type="number" id="elaBlock" placeholder="120">
+                            <div class="helper-text">Uninterrupted literacy time</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="mathBlock" class="required">Math Block Length (minutes)</label>
+                            <input type="number" id="mathBlock" placeholder="60">
+                            <div class="helper-text">Minimum required</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="eldBlock" class="required">Designated ELD (minutes/day)</label>
+                            <input type="number" id="eldBlock" placeholder="30">
+                        </div>
+                        <div class="form-group">
+                            <label for="scienceSocial">Science/Social Studies Structure</label>
+                            <select id="scienceSocial">
+                                <option value="">Select...</option>
+                                <option value="integrated">Integrated into ELA</option>
+                                <option value="separate">Separate dedicated blocks</option>
+                                <option value="alternating">Alternating days/weeks</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Block Protection Notes</label>
+                        <textarea id="blockNotes" placeholder="Are there any blocks that must be protected from interruption? Any flexibility in timing?
+
+Example: 'ELA block must be morning, uninterrupted. Math can be afternoon. Intervention should not remove students from Tier 1 literacy.'"></textarea>
+                    </div>
+
+                    <div class="section-nav">
+                        <button class="btn btn-secondary" onclick="prevSection(6)">← Back</button>
+                        <button class="btn btn-primary" onclick="nextSection(6)">Continue →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 6: Structural Constraints -->
+            <div class="section-card collapsed" data-section="7">
+                <div class="section-header" onclick="toggleSection(7)">
+                    <div class="section-title">
+                        <span class="section-number">6</span>
+                        <h2>Structural Constraints</h2>
+                    </div>
+                    <span>▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="recessTimes" class="required">Recess Times by Grade Band</label>
+                        <textarea id="recessTimes" placeholder="K-2: 10:00-10:20 AM
+3-5: 10:30-10:50 AM"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="lunchTimes" class="required">Lunch Times by Grade Band</label>
+                        <textarea id="lunchTimes" placeholder="TK-1: 11:30-12:10
+2-3: 12:00-12:40
+4-5: 12:30-1:10"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="prepMinutes" class="required">Teacher Prep Minutes Required</label>
+                        <input type="number" id="prepMinutes" placeholder="225">
+                        <div class="helper-text">Per week, per contract</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Teacher Contractual Constraints</label>
+                        <textarea id="contractConstraints" placeholder="Examples:
+- Teachers must have 45 min prep weekly through specialist rotations
+- No lunch duty more than 2x per week
+- Required collaboration time: 90 min weekly
+- Latest staff dismissal: 3:15 PM"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Shared Staff Limitations</label>
+                        <textarea id="sharedStaff" placeholder="Music teacher shared with middle school (here Mon-Wed only)
+Speech pathologist serves 3 sites"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Facility/Space Constraints</label>
+                        <textarea id="facilityConstraints" placeholder="Only 2 intervention rooms available
+Gym shared with afterschool program (must finish by 2:45)
+Library used for RSP services"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>State/District Requirements</label>
+                        <textarea id="requirements" placeholder="Required Instructional Minutes: 36,000 annually
+PE Minutes Required: 200 per week
+Other specific requirements..."></textarea>
+                    </div>
+
+                    <div class="section-nav">
+                        <button class="btn btn-secondary" onclick="prevSection(7)">← Back</button>
+                        <button class="btn btn-primary" onclick="nextSection(7)">Continue →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 7: Scheduling Problems -->
+            <div class="section-card collapsed" data-section="8">
+                <div class="section-header" onclick="toggleSection(8)">
+                    <div class="section-title">
+                        <span class="section-number">7</span>
+                        <h2>Top Scheduling Problems</h2>
+                    </div>
+                    <span>▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="problem1" class="required">Problem #1 (Most Critical)</label>
+                        <textarea id="problem1" placeholder="Describe your most critical scheduling challenge"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="problem2" class="required">Problem #2</label>
+                        <textarea id="problem2" placeholder="Second major challenge"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="problem3" class="required">Problem #3</label>
+                        <textarea id="problem3" placeholder="Third major challenge"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="equityGaps" class="required">Specific Equity Gaps</label>
+                        <textarea id="equityGaps" placeholder="Which student groups are most at risk of being underserved?
+
+Examples:
+- Dually identified students missing core instruction
+- Newcomers not getting enough Designated ELD
+- Long-term ELs plateauing
+- Students with IEPs missing PE/enrichment
+- Intervention students missing different subjects each day"></textarea>
+                    </div>
+
+                    <div class="section-nav">
+                        <button class="btn btn-secondary" onclick="prevSection(8)">← Back</button>
+                        <button class="btn btn-primary" onclick="nextSection(8)">Continue →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 8: Scheduling Philosophy & Outcomes -->
+            <div class="section-card collapsed" data-section="9">
+                <div class="section-header" onclick="toggleSection(9)">
+                    <div class="section-title">
+                        <span class="section-number">8</span>
+                        <h2>Scheduling Philosophy & Outcomes</h2>
+                    </div>
+                    <span>▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="mustHaves" class="required">Must-Haves (Non-Negotiable)</label>
+                        <textarea id="mustHaves" placeholder="1. All students receive BOTH ELD and IEP services without conflicts
+2. Protected core instruction time for ALL students
+3. Consistent intervention schedule that doesn't rotate subjects
+4. [Add more...]"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="niceToHaves">Nice-to-Haves (Secondary Priorities)</label>
+                        <textarea id="niceToHaves" placeholder="1. Common grade-level planning time
+2. Specialist blocks that allow flexible grouping
+3. [Add more...]"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="required">Scheduling Philosophy & Values</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="phil1" value="Prioritize inclusion over pull-out whenever possible">
+                                <label for="phil1">Prioritize inclusion over pull-out whenever possible</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="phil2" value="Avoid removing students from Tier 1 literacy">
+                                <label for="phil2">Avoid removing students from Tier 1 literacy</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="phil3" value="Minimize transitions for TK-2 students">
+                                <label for="phil3">Minimize transitions for TK-2 students</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="phil4" value="Intervention should not function as remediation-only tracking">
+                                <label for="phil4">Intervention should not function as remediation-only tracking</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="phil5" value="Preserve student access to enrichment and electives">
+                                <label for="phil5">Preserve student access to enrichment and electives</label>
+                            </div>
+                        </div>
+                        <textarea id="philOther" placeholder="Other values or philosophical priorities..." style="margin-top: 1rem;"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Models to Explore</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="model1" value="Designated ELD during specialist rotations">
+                                <label for="model1">Designated ELD during specialist rotations</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="model2" value="Intervention blocks at consistent times daily">
+                                <label for="model2">Intervention blocks at consistent times daily</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="model3" value="Push-in vs. pull-out models for different services">
+                                <label for="model3">Push-in vs. pull-out models for different services</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="model4" value="Flexible grouping strategies for uneven EL cohorts">
+                                <label for="model4">Flexible grouping strategies for uneven EL cohorts</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="model5" value="Co-teaching models for dually identified students">
+                                <label for="model5">Co-teaching models for dually identified students</label>
+                            </div>
+                        </div>
+                        <textarea id="modelOther" placeholder="Other models to explore..." style="margin-top: 1rem;"></textarea>
+                    </div>
+
+                    <div class="section-nav">
+                        <button class="btn btn-secondary" onclick="prevSection(9)">← Back</button>
+                        <button class="btn btn-primary" onclick="nextSection(9)">Review & Generate →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 9: Generate Schedule -->
+            <div class="section-card collapsed" data-section="10">
+                <div class="section-header" onclick="toggleSection(10)">
+                    <div class="section-title">
+                        <span class="section-number">9</span>
+                        <h2>Generate Bell Schedule</h2>
+                    </div>
+                    <span>▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="info-box">
+                        <strong>Ready to Generate</strong>
+                        Review your information above, then click Generate to create your equity-focused bell schedule using AI.
+                    </div>
+
+                    <div style="text-align: center; padding: 2rem 0;">
+                        <button class="btn btn-primary" onclick="generateSchedule()" style="font-size: 1.125rem; padding: 1.25rem 3rem;">
+                            ✨ Generate Bell Schedule
+                        </button>
+                    </div>
+
+                    <div class="section-nav">
+                        <button class="btn btn-secondary" onclick="prevSection(10)">← Back</button>
+                        <div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection">
+                <div id="loadingState" class="loading-state">
+                    <div class="spinner"></div>
+                    <h3>Generating Your Equity-Focused Bell Schedule...</h3>
+                    <p>This may take 30-60 seconds as AI analyzes your school's unique needs.</p>
+                </div>
+
+                <div id="scheduleResults" style="display: none;">
+                    <div class="results-header">
+                        <h2>✅ Your Bell Schedule Options</h2>
+                        <p id="schoolNameDisplay"></p>
+                    </div>
+
+                    <div class="export-options">
+                        <button class="btn btn-primary" onclick="exportToExcel()">📊 Download Excel Spreadsheet</button>
+                        <button class="btn btn-secondary" onclick="copySchedule()">📋 Copy All</button>
+                        <button class="btn btn-secondary" onclick="printSchedule()">🖨️ Print</button>
+                    </div>
+
+                    <div class="schedule-output" id="scheduleOutput">
+                        <!-- Tabs will be inserted here -->
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" onclick="startOver()">🔄 Create New Schedule</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Copied to clipboard!</div>
+
+    <script>
+        let currentSection = 1;
+        const totalSections = 10;
+
+        function toggleSection(num) {
+            const section = document.querySelector(`[data-section="${num}"]`);
+            const isCollapsed = section.classList.contains('collapsed');
+            
+            // Close all sections first
+            document.querySelectorAll('.section-card').forEach(s => {
+                s.classList.add('collapsed');
+                s.classList.remove('active');
+            });
+            
+            // If the clicked section was collapsed, open it
+            if (isCollapsed) {
+                section.classList.remove('collapsed');
+                section.classList.add('active');
+            }
+        }
+
+        function nextSection(from) {
+            if (!validateSection(from)) return;
+            
+            const current = document.querySelector(`[data-section="${from}"]`);
+            current.classList.add('collapsed');
+            current.classList.add('completed');
+            current.classList.remove('active');
+            
+            if (from < totalSections) {
+                const next = document.querySelector(`[data-section="${from + 1}"]`);
+                next.classList.remove('collapsed');
+                next.classList.add('active');
+                next.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            
+            currentSection = from + 1;
+            updateProgress();
+        }
+
+        function prevSection(from) {
+            const current = document.querySelector(`[data-section="${from}"]`);
+            current.classList.add('collapsed');
+            current.classList.remove('active');
+            
+            const prev = document.querySelector(`[data-section="${from - 1}"]`);
+            prev.classList.remove('collapsed');
+            prev.classList.remove('completed');
+            prev.classList.add('active');
+            prev.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            currentSection = from - 1;
+            updateProgress();
+        }
+
+        function validateSection(num) {
+            const section = document.querySelector(`[data-section="${num}"]`);
+            const required = section.querySelectorAll('input[required], textarea[required], select[required]');
+            let valid = true;
+
+            // Also check for labels with class "required"
+            const requiredByLabel = section.querySelectorAll('.required');
+            requiredByLabel.forEach(label => {
+                const forAttr = label.getAttribute('for');
+                if (forAttr) {
+                    const input = document.getElementById(forAttr);
+                    if (input && !input.value.trim()) {
+                        input.style.borderColor = 'var(--error)';
+                        valid = false;
+                    }
+                }
+            });
+
+            if (!valid) {
+                alert('Please fill in all required fields marked with *');
+            }
+
+            return valid;
+        }
+
+        function updateProgress() {
+            const completed = document.querySelectorAll('.section-card.completed').length;
+            const progress = (completed / totalSections) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+
+            // Update step indicators
+            document.querySelectorAll('.progress-step').forEach((step, idx) => {
+                step.classList.remove('active', 'completed');
+                if (idx + 1 < currentSection) {
+                    step.classList.add('completed');
+                } else if (idx + 1 === currentSection) {
+                    step.classList.add('active');
+                }
+            });
+        }
+
+        function addDualRow() {
+            const tbody = document.getElementById('dualStudentRows');
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td><input type="text" class="dual-grade" placeholder="1" style="width: 60px;"></td>
+                <td><input type="number" class="dual-count" placeholder="1" style="width: 60px;"></td>
+                <td><input type="number" class="dual-rspmins" placeholder="240" style="width: 80px;"></td>
+                <td>
+                    <select class="dual-elproficiency" style="width: 120px;">
+                        <option value="">Select...</option>
+                        <option value="Emerging">Emerging</option>
+                        <option value="Expanding">Expanding</option>
+                        <option value="Bridging">Bridging</option>
+                    </select>
+                </td>
+                <td><input type="text" class="dual-notes" placeholder=""></td>
+            `;
+            tbody.appendChild(newRow);
+        }
+
+        function getDuallyIdentifiedDetails() {
+            const rows = document.querySelectorAll('#dualStudentRows tr');
+            const details = [];
+            rows.forEach(row => {
+                const grade = row.querySelector('.dual-grade').value;
+                const count = row.querySelector('.dual-count').value;
+                const rspMins = row.querySelector('.dual-rspmins').value;
+                const elProf = row.querySelector('.dual-elproficiency').value;
+                const notes = row.querySelector('.dual-notes').value;
+                
+                if (grade && count) {
+                    details.push({
+                        grade,
+                        count,
+                        rspMins: rspMins || 'Not specified',
+                        elProficiency: elProf || 'Not specified',
+                        notes: notes || ''
+                    });
+                }
+            });
+            return details;
+        }
+
+        function formatDuallyIdentifiedForPrompt() {
+            const details = getDuallyIdentifiedDetails();
+            if (details.length === 0) {
+                return `${document.getElementById('duallyIdentified').value} students (breakdown not provided)`;
+            }
+            
+            let formatted = `${document.getElementById('duallyIdentified').value} students total:\n`;
+            details.forEach(d => {
+                formatted += `  - Grade ${d.grade}: ${d.count} student(s) | ${d.rspMins} RSP min/week | ${d.elProficiency} EL proficiency`;
+                if (d.notes) formatted += ` | ${d.notes}`;
+                formatted += '\n';
+            });
+            return formatted;
+        }
+
+        function addSpecialist() {
+            const container = document.getElementById('specialistList');
+            const newItem = document.createElement('div');
+            newItem.className = 'specialist-item';
+            newItem.innerHTML = `
+                <div class="form-group">
+                    <label>Specialist</label>
+                    <input type="text" placeholder="Art Teacher" class="specialist-name">
+                </div>
+                <div class="form-group">
+                    <label>FTE</label>
+                    <input type="number" step="0.1" placeholder="0.5" class="specialist-fte">
+                </div>
+                <div class="form-group">
+                    <label>Session Length</label>
+                    <input type="text" placeholder="45 min" class="specialist-length">
+                </div>
+                <div class="form-group">
+                    <label>Frequency/Schedule</label>
+                    <input type="text" placeholder="1x weekly" class="specialist-freq">
+                </div>
+            `;
+            container.appendChild(newItem);
+        }
+
+        function getSpecialists() {
+            const specialists = [];
+            document.querySelectorAll('.specialist-item').forEach(item => {
+                const name = item.querySelector('.specialist-name').value;
+                const fte = item.querySelector('.specialist-fte').value;
+                const length = item.querySelector('.specialist-length').value;
+                const freq = item.querySelector('.specialist-freq').value;
+                if (name) {
+                    specialists.push(`${name}: ${fte} FTE, ${length}, ${freq}`);
+                }
+            });
+            return specialists.join('\n');
+        }
+
+        function getClassroomStructure() {
+            const grades = ['TK', 'K', '1', '2', '3', '4', '5', '6'];
+            const structure = [];
+            grades.forEach(g => {
+                const classes = document.getElementById(`classes${g}`).value;
+                const notes = document.getElementById(`notes${g}`).value;
+                if (classes && parseInt(classes) > 0) {
+                    structure.push(`${g === 'K' ? 'Kindergarten' : g === 'TK' ? 'TK' : `${g}st/nd/rd/th Grade`}: ${classes} class${classes > 1 ? 'es' : ''}${notes ? ` (${notes})` : ''}`);
+                }
+            });
+            return structure.join('\n');
+        }
+
+        function getPhilosophy() {
+            const values = [];
+            for (let i = 1; i <= 5; i++) {
+                const checkbox = document.getElementById(`phil${i}`);
+                if (checkbox && checkbox.checked) {
+                    values.push(checkbox.value);
+                }
+            }
+            const other = document.getElementById('philOther').value.trim();
+            if (other) values.push(other);
+            return values.join('\n- ');
+        }
+
+        function getModels() {
+            const models = [];
+            for (let i = 1; i <= 5; i++) {
+                const checkbox = document.getElementById(`model${i}`);
+                if (checkbox && checkbox.checked) {
+                    models.push(checkbox.value);
+                }
+            }
+            const other = document.getElementById('modelOther').value.trim();
+            if (other) models.push(other);
+            return models.join('\n- ');
+        }
+
+        async function generateSchedule() {
+            // Show results section with loading
+            document.getElementById('resultsSection').classList.add('show');
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('scheduleResults').style.display = 'none';
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+
+            const prompt = `You are an expert elementary school scheduling consultant. Create 2-3 detailed bell schedule approaches for this school.
+
+SCHOOL CONTEXT:
+School: ${document.getElementById('schoolName').value}
+District: ${document.getElementById('district').value}
+Grades: ${document.getElementById('gradeLevels').value}
+Enrollment: ${document.getElementById('enrollment').value}
+Day: ${document.getElementById('startTime').value} - ${document.getElementById('endTime').value} (${document.getElementById('instMinutes').value} min)
+${getGhostSpacesPromptText()}
+
+CLASSROOM STRUCTURE:
+${getClassroomStructure()}
+${document.getElementById('specializedClassrooms').value ? 'Specialized: ' + document.getElementById('specializedClassrooms').value : ''}
+
+STUDENTS:
+EL: ${document.getElementById('totalEL').value} (Emerging: ${document.getElementById('emergingTotal').value}, Expanding: ${document.getElementById('expandingTotal').value}, Bridging: ${document.getElementById('bridgingTotal').value})
+Languages: ${document.getElementById('primaryLanguages').value}
+IEP: ${document.getElementById('totalIEP').value}
+
+CRITICAL - DUALLY IDENTIFIED STUDENTS (EL + IEP):
+${formatDuallyIdentifiedForPrompt()}
+Current Challenge: ${document.getElementById('dualChallenge').value}
+
+Intervention - T2: ${document.getElementById('tier2').value}, T3: ${document.getElementById('tier3').value}
+Structure: ${document.getElementById('interventionStructure').value}
+
+STAFFING:
+ELD: ${document.getElementById('eldFTE').value} FTE | SpEd: ${document.getElementById('spedFTE').value} FTE | Intervention: ${document.getElementById('interventionFTE').value} FTE
+Specialists: ${getSpecialists()}
+Prep Coverage: ${document.getElementById('prepCoverage').value}
+
+CORE BLOCKS (REQUIRED):
+ELA: ${document.getElementById('elaBlock').value} min | Math: ${document.getElementById('mathBlock').value} min | ELD: ${document.getElementById('eldBlock').value} min
+Sci/SS: ${document.getElementById('scienceSocial').value}
+Notes: ${document.getElementById('blockNotes').value}
+
+CONSTRAINTS:
+Recess: ${document.getElementById('recessTimes').value}
+Lunch: ${document.getElementById('lunchTimes').value}
+Prep: ${document.getElementById('prepMinutes').value} min/week required
+${document.getElementById('contractConstraints').value}
+
+PROBLEMS:
+1. ${document.getElementById('problem1').value}
+2. ${document.getElementById('problem2').value}
+3. ${document.getElementById('problem3').value}
+Equity Gaps: ${document.getElementById('equityGaps').value}
+
+MUST-HAVES: ${document.getElementById('mustHaves').value}
+PHILOSOPHY: ${getPhilosophy()}
+MODELS: ${getModels()}
+
+CRITICAL INSTRUCTIONS FOR OUTPUT FORMAT:
+
+IMPORTANT: Pay special attention to the dually identified students (EL + IEP). For each student group listed, you must show EXACTLY when and how they receive:
+1. Their required RSP minutes per week
+2. Their designated ELD (30 min daily = 150 min/week)
+3. Full access to core instruction (ELA and Math blocks)
+4. Access to specialists and enrichment
+
+These students cannot miss core instruction to receive services. Services must be coordinated, not competing.
+
+Provide 2-3 different scheduling approaches. For EACH approach, structure your response EXACTLY like this:
+
+APPROACH [NUMBER]: [Name of Approach]
+
+SUMMARY:
+[2-3 sentences describing this approach and its key equity focus]
+
+SAMPLE DAILY SCHEDULE - [Grade Level]:
+[Create a table with these EXACT column headers: Time | Activity | Students | Staff | Notes]
+
+For example:
+Time | Activity | Students | Staff | Notes
+8:00-8:15 | Morning Meeting | All 24 students | Classroom Teacher | Build community
+8:15-10:15 | ELA Block | All 24 students | Classroom Teacher | Uninterrupted literacy
+10:15-10:30 | Recess | All students | Yard Duty | 
+10:30-11:00 | Designated ELD | 8 ELs (Emerging) | ELD Specialist | Pull-out, classroom teacher has 16 students for enrichment
+
+Continue this format for the entire day from ${document.getElementById('startTime').value} to ${document.getElementById('endTime').value}.
+
+EQUITY ANALYSIS:
+[Explain how this schedule addresses:]
+- Dually identified students: [For EACH group you identified by grade/RSP mins/EL proficiency, show specifically when they get RSP, when they get ELD, and confirm they keep full core instruction access]
+- ELD groupings:
+- Intervention without sacrificing core:
+- Planning time:
+
+TRADE-OFFS:
+[List 2-3 trade-offs of this approach]
+
+---
+
+Then repeat this EXACT format for Approach 2 and Approach 3.
+
+Remember: Use the pipe | character to separate table columns. Be specific with times, student groups, and staff assignments.`;
+
+            try {
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 8000,
+                        messages: [
+                            { role: "user", content: prompt }
+                        ],
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.content && data.content[0] && data.content[0].text) {
+                    displaySchedule(data.content[0].text);
+                } else {
+                    throw new Error('No response from AI');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loadingState').innerHTML = `
+                    <h3 style="color: var(--error);">Error Generating Schedule</h3>
+                    <p>There was an issue connecting to the AI service. Please try again.</p>
+                    <button class="btn btn-primary" onclick="generateSchedule()">Retry</button>
+                `;
+            }
+        }
+
+        let currentScheduleData = null;
+
+        function displaySchedule(scheduleText) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('scheduleResults').style.display = 'block';
+            document.getElementById('schoolNameDisplay').textContent = document.getElementById('schoolName').value;
+            
+            // Parse the schedule text into structured data
+            const approaches = parseScheduleText(scheduleText);
+            currentScheduleData = approaches;
+            
+            // Create tabbed interface
+            const output = document.getElementById('scheduleOutput');
+            output.innerHTML = createTabbedInterface(approaches);
+            
+            // Activate first tab
+            if (approaches.length > 0) {
+                activateTab(0);
+            }
+        }
+
+        function parseScheduleText(text) {
+            const approaches = [];
+            const sections = text.split(/APPROACH \d+:/i).filter(s => s.trim());
+            
+            sections.forEach((section, index) => {
+                const lines = section.split('\n');
+                const approach = {
+                    number: index + 1,
+                    name: '',
+                    summary: '',
+                    schedule: [],
+                    equityAnalysis: '',
+                    tradeoffs: ''
+                };
+                
+                // Extract name (first line)
+                approach.name = lines[0].trim();
+                
+                let currentSection = '';
+                let tableLines = [];
+                let analysisText = '';
+                let tradeoffText = '';
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    
+                    if (line.startsWith('SUMMARY:')) {
+                        currentSection = 'summary';
+                    } else if (line.match(/SAMPLE DAILY SCHEDULE/i)) {
+                        currentSection = 'schedule';
+                    } else if (line.startsWith('EQUITY ANALYSIS:')) {
+                        currentSection = 'equity';
+                    } else if (line.startsWith('TRADE-OFFS:')) {
+                        currentSection = 'tradeoffs';
+                    } else if (line.includes('|') && currentSection === 'schedule') {
+                        tableLines.push(line);
+                    } else if (currentSection === 'summary' && line) {
+                        approach.summary += line + ' ';
+                    } else if (currentSection === 'equity' && line) {
+                        analysisText += line + '\n';
+                    } else if (currentSection === 'tradeoffs' && line) {
+                        tradeoffText += line + '\n';
+                    }
+                }
+                
+                // Parse table
+                if (tableLines.length > 1) {
+                    const headers = tableLines[0].split('|').map(h => h.trim()).filter(h => h);
+                    for (let i = 1; i < tableLines.length; i++) {
+                        if (!tableLines[i].includes('---')) { // Skip separator lines
+                            const cells = tableLines[i].split('|').map(c => c.trim()).filter(c => c);
+                            if (cells.length > 0) {
+                                const row = {};
+                                headers.forEach((header, idx) => {
+                                    row[header] = cells[idx] || '';
+                                });
+                                approach.schedule.push(row);
+                            }
+                        }
+                    }
+                }
+                
+                approach.equityAnalysis = analysisText.trim();
+                approach.tradeoffs = tradeoffText.trim();
+                
+                if (approach.schedule.length > 0) {
+                    approaches.push(approach);
+                }
+            });
+            
+            return approaches;
+        }
+
+        function createTabbedInterface(approaches) {
+            let html = '<div class="schedule-tabs">';
+            approaches.forEach((approach, index) => {
+                html += `<button class="schedule-tab" onclick="activateTab(${index})">
+                    Approach ${approach.number}: ${approach.name}
+                </button>`;
+            });
+            html += '</div>';
+            
+            approaches.forEach((approach, index) => {
+                html += `<div class="schedule-tab-content" id="tab-${index}">`;
+                html += createApproachContent(approach);
+                html += '</div>';
+            });
+            
+            return html;
+        }
+
+        function createApproachContent(approach) {
+            let html = `
+                <div class="approach-card">
+                    <div class="approach-header">
+                        <h3>Approach ${approach.number}: ${approach.name}</h3>
+                        <p>${approach.summary}</p>
+                    </div>
+                    
+                    <div class="spreadsheet-container">
+                        <table class="schedule-table">
+                            <thead>
+                                <tr>`;
+            
+            // Create headers from first row
+            if (approach.schedule.length > 0) {
+                const headers = Object.keys(approach.schedule[0]);
+                headers.forEach((header, idx) => {
+                    const colClass = idx === 0 ? 'time-col' : (idx === 1 ? 'activity-col' : '');
+                    html += `<th class="${colClass}">${header}</th>`;
+                });
+                html += '</tr></thead><tbody>';
+                
+                // Create rows
+                approach.schedule.forEach(row => {
+                    html += '<tr>';
+                    headers.forEach((header, idx) => {
+                        let cellClass = '';
+                        if (idx === 0) cellClass = 'time-cell';
+                        
+                        const activity = row['Activity'] || row['activity'] || '';
+                        if (activity.toLowerCase().includes('recess') || activity.toLowerCase().includes('lunch')) {
+                            cellClass += ' break-row';
+                        } else if (activity.toLowerCase().includes('ela') || activity.toLowerCase().includes('math')) {
+                            cellClass += ' core-instruction';
+                        } else if (activity.toLowerCase().includes('intervention')) {
+                            cellClass += ' intervention';
+                        } else if (activity.toLowerCase().includes('eld')) {
+                            cellClass += ' eld';
+                        } else if (activity.toLowerCase().includes('pe') || activity.toLowerCase().includes('art') || activity.toLowerCase().includes('music')) {
+                            cellClass += ' specialist';
+                        }
+                        
+                        html += `<td class="${cellClass}">${row[header]}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                html += '</tbody>';
+            }
+            
+            html += `</table>
+                    </div>
+                    
+                    <div class="schedule-legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #dbeafe;"></div>
+                            <span>Core Instruction</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #fce7f3;"></div>
+                            <span>Intervention</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #fef3c7;"></div>
+                            <span>ELD / Breaks</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #dcfce7;"></div>
+                            <span>Specialists</span>
+                        </div>
+                    </div>
+                    
+                    <div class="notes-section">
+                        <h4>🎯 Equity Analysis</h4>
+                        <div style="white-space: pre-wrap; font-size: 0.875rem; line-height: 1.6;">${approach.equityAnalysis}</div>
+                    </div>
+                    
+                    <div class="notes-section">
+                        <h4>⚖️ Trade-offs</h4>
+                        <div style="white-space: pre-wrap; font-size: 0.875rem; line-height: 1.6;">${approach.tradeoffs}</div>
+                    </div>
+                </div>
+            `;
+            
+            return html;
+        }
+
+        function activateTab(index) {
+            // Deactivate all tabs
+            document.querySelectorAll('.schedule-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.schedule-tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Activate selected tab
+            document.querySelectorAll('.schedule-tab')[index].classList.add('active');
+            document.getElementById(`tab-${index}`).classList.add('active');
+        }
+
+        function exportToExcel() {
+            if (!currentScheduleData || currentScheduleData.length === 0) {
+                alert('No schedule data to export');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            
+            currentScheduleData.forEach(approach => {
+                // Create worksheet for each approach
+                const wsData = [];
+                
+                // Add header
+                wsData.push([`Approach ${approach.number}: ${approach.name}`]);
+                wsData.push([approach.summary]);
+                wsData.push([]);
+                
+                // Add schedule table
+                if (approach.schedule.length > 0) {
+                    const headers = Object.keys(approach.schedule[0]);
+                    wsData.push(headers);
+                    approach.schedule.forEach(row => {
+                        wsData.push(headers.map(h => row[h]));
+                    });
+                }
+                
+                wsData.push([]);
+                wsData.push(['EQUITY ANALYSIS']);
+                wsData.push([approach.equityAnalysis]);
+                wsData.push([]);
+                wsData.push(['TRADE-OFFS']);
+                wsData.push([approach.tradeoffs]);
+                
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // Set column widths
+                ws['!cols'] = [
+                    { wch: 15 },  // Time
+                    { wch: 30 },  // Activity
+                    { wch: 25 },  // Students
+                    { wch: 20 },  // Staff
+                    { wch: 40 }   // Notes
+                ];
+                
+                const sheetName = `Approach ${approach.number}`.substring(0, 31);
+                XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            });
+            
+            // Add summary sheet
+            const summaryData = [
+                [`Bell Schedule Options - ${document.getElementById('schoolName').value}`],
+                [`Generated: ${new Date().toLocaleDateString()}`],
+                [],
+                ['DUALLY IDENTIFIED STUDENTS (EL + IEP):'],
+                ['Grade', '# Students', 'RSP Min/Week', 'EL Proficiency', 'Notes']
+            ];
+            
+            const dualDetails = getDuallyIdentifiedDetails();
+            if (dualDetails.length > 0) {
+                dualDetails.forEach(d => {
+                    summaryData.push([d.grade, d.count, d.rspMins, d.elProficiency, d.notes]);
+                });
+            } else {
+                summaryData.push(['No breakdown provided', '', '', '', '']);
+            }
+            
+            summaryData.push([]);
+            summaryData.push(['SCHEDULING APPROACHES:']);
+            summaryData.push([]);
+            
+            currentScheduleData.forEach(approach => {
+                summaryData.push([`Approach ${approach.number}`, approach.name]);
+                summaryData.push(['', approach.summary]);
+                summaryData.push([]);
+            });
+            
+            const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+            summaryWs['!cols'] = [{ wch: 20 }, { wch: 60 }];
+            XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary', true);
+            
+            // Download
+            const schoolName = document.getElementById('schoolName').value.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const filename = `bell_schedule_${schoolName}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, filename);
+        }
+
+        function copySchedule() {
+            if (!currentScheduleData) return;
+            
+            let text = `BELL SCHEDULE OPTIONS - ${document.getElementById('schoolName').value}\n`;
+            text += `Generated: ${new Date().toLocaleString()}\n\n`;
+            text += '='.repeat(80) + '\n\n';
+            
+            currentScheduleData.forEach(approach => {
+                text += `APPROACH ${approach.number}: ${approach.name}\n`;
+                text += `${approach.summary}\n\n`;
+                
+                if (approach.schedule.length > 0) {
+                    const headers = Object.keys(approach.schedule[0]);
+                    text += headers.join(' | ') + '\n';
+                    text += '-'.repeat(80) + '\n';
+                    approach.schedule.forEach(row => {
+                        text += headers.map(h => row[h]).join(' | ') + '\n';
+                    });
+                }
+                
+                text += `\nEQUITY ANALYSIS:\n${approach.equityAnalysis}\n\n`;
+                text += `TRADE-OFFS:\n${approach.tradeoffs}\n\n`;
+                text += '='.repeat(80) + '\n\n';
+            });
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('All schedules copied to clipboard!');
+            });
+        }
+
+        function printSchedule() {
+            window.print();
+        }
+
+        function downloadSchedule() {
+            copySchedule(); // Reuse the text generation
+        }
+
+        function startOver() {
+            if (confirm('Start over with a new school? This will clear all current information.')) {
+                location.reload();
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+
+        // ─── ROSTER UPLOAD ───────────────────────────────────────────────
+
+        let rosterData = null;
+
+        const dropZone = document.getElementById('rosterDropZone');
+        if (dropZone) {
+            dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+            dropZone.addEventListener('drop', e => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file) processRosterFile(file);
+            });
+        }
+
+        function handleRosterUpload(event) {
+            const file = event.target.files[0];
+            if (file) processRosterFile(file);
+        }
+
+        function processRosterFile(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let rows = [];
+                    if (ext === 'csv') {
+                        rows = parseCSV(e.target.result);
+                    } else if (ext === 'xlsx' || ext === 'xls') {
+                        const wb = XLSX.read(e.target.result, { type: 'binary' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+                    }
+                    if (rows.length === 0) { alert('No data found in file.'); return; }
+                    rosterData = rows;
+                    displayRosterResults(file.name, rows);
+                    autoPopulateFromRoster(rows);
+                } catch(err) {
+                    alert('Could not read file: ' + err.message);
+                }
+            };
+            if (ext === 'csv') reader.readAsText(file);
+            else reader.readAsBinaryString(file);
+        }
+
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            if (lines.length < 2) return [];
+            const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+            return lines.slice(1).map(line => {
+                const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+                const obj = {};
+                headers.forEach((h, i) => obj[h] = vals[i] || '');
+                return obj;
+            });
+        }
+
+        function findCol(row, candidates) {
+            const keys = Object.keys(row).map(k => k.toLowerCase().replace(/[^a-z0-9]/g, ''));
+            for (const c of candidates) {
+                const idx = keys.indexOf(c.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                if (idx !== -1) return Object.keys(row)[idx];
+            }
+            return null;
+        }
+
+        function isYes(val) {
+            if (!val) return false;
+            const v = val.toString().toLowerCase().trim();
+            return v === 'yes' || v === '1' || v === 'true' || v === 'el' || v === 'ell' || v === 'y';
+        }
+
+        function autoPopulateFromRoster(rows) {
+            const sample = rows[0];
+            const gradeCol = findCol(sample, ['grade','gradelevel','grade_level','gr']);
+            const elCol = findCol(sample, ['el_status','elstatus','english_learner','el','ell','englishlearner']);
+            const profCol = findCol(sample, ['el_proficiency','proficiency','elproficiency','prof_level','proficiency_level']);
+            const iepCol = findCol(sample, ['iep','has_iep','sped','special_ed','specialed']);
+            const tierCol = findCol(sample, ['tier','mtss_tier','intervention_tier']);
+            const langCol = findCol(sample, ['language','home_language','primary_language','lang','homelanguage']);
+
+            let emerging = 0, expanding = 0, bridging = 0;
+            let iepCount = 0, duallyCount = 0;
+            let tier2 = 0, tier3 = 0;
+            const languages = {};
+
+            rows.forEach(row => {
+                const isEL = elCol && isYes(row[elCol]);
+                const hasIEP = iepCol && isYes(row[iepCol]);
+                const prof = profCol ? (row[profCol] || '').toString().toLowerCase() : '';
+                const tier = tierCol ? (row[tierCol] || '').toString() : '';
+                const lang = langCol ? (row[langCol] || '').toString().trim() : '';
+
+                if (isEL) {
+                    if (prof.includes('emerg')) emerging++;
+                    else if (prof.includes('expand')) expanding++;
+                    else if (prof.includes('bridg')) bridging++;
+                }
+                if (hasIEP) iepCount++;
+                if (isEL && hasIEP) duallyCount++;
+                if (tier === '2') tier2++;
+                if (tier === '3') tier3++;
+                if (lang && lang.toLowerCase() !== 'english' && lang !== '') {
+                    languages[lang] = (languages[lang] || 0) + 1;
+                }
+            });
+
+            const totalEL = emerging + expanding + bridging;
+            if (totalEL > 0) {
+                document.getElementById('totalEL').value = totalEL;
+                document.getElementById('emergingTotal').value = emerging;
+                document.getElementById('expandingTotal').value = expanding;
+                document.getElementById('bridgingTotal').value = bridging;
+            }
+            if (iepCount > 0) document.getElementById('totalIEP').value = iepCount;
+            if (duallyCount > 0) document.getElementById('duallyIdentified').value = duallyCount;
+            if (tier2 > 0) document.getElementById('tier2').value = tier2;
+            if (tier3 > 0) document.getElementById('tier3').value = tier3;
+            // Reconciliation: compare roster rows to enrollment entered in Section 1
+            const enteredEnrollment = parseInt(document.getElementById('enrollment').value) || 0;
+            const rosterCount = rows.length;
+
+            if (rows.length > 0) {
+                if (enteredEnrollment === 0) {
+                    // Nothing entered yet — just set it
+                    document.getElementById('enrollment').value = rosterCount;
+                } else if (rosterCount !== enteredEnrollment) {
+                    // Mismatch — trigger reconciliation UI
+                    showReconciliation(rosterCount, enteredEnrollment);
+                }
+                // If they match exactly, no reconciliation needed
+            }
+            if (Object.keys(languages).length > 0) {
+                document.getElementById('primaryLanguages').value = Object.entries(languages)
+                    .sort((a,b) => b[1]-a[1]).slice(0,5).map(([lang]) => lang).join(', ');
+            }
+        }
+
+        function displayRosterResults(filename, rows) {
+            document.getElementById('rosterFileName').textContent = filename + ' — ' + rows.length + ' students loaded';
+            document.getElementById('rosterSuccess').classList.add('show');
+
+            const sample = rows[0];
+            const elCol = findCol(sample, ['el_status','elstatus','el','ell','englishlearner']);
+            const iepCol = findCol(sample, ['iep','has_iep','sped','specialed']);
+            const gradeCol = findCol(sample, ['grade','gradelevel','gr']);
+            const tierCol = findCol(sample, ['tier','mtss_tier']);
+
+            const elCount = rows.filter(r => elCol && isYes(r[elCol])).length;
+            const iepCount = rows.filter(r => iepCol && isYes(r[iepCol])).length;
+            const duallyCount = rows.filter(r => elCol && iepCol && isYes(r[elCol]) && isYes(r[iepCol])).length;
+
+            const statsEl = document.getElementById('rosterStats');
+            statsEl.innerHTML =
+                '<div class="roster-stat"><div class="stat-number">' + rows.length + '</div><div class="stat-label">Total Students</div></div>' +
+                '<div class="roster-stat"><div class="stat-number">' + (elCount || '—') + '</div><div class="stat-label">English Learners</div></div>' +
+                '<div class="roster-stat"><div class="stat-number">' + (iepCount || '—') + '</div><div class="stat-label">Students w/ IEPs</div></div>' +
+                '<div class="roster-stat"><div class="stat-number" style="color:var(--accent)">' + (duallyCount || '—') + '</div><div class="stat-label">Dually Identified</div></div>';
+
+            const previewCols = [gradeCol, elCol, iepCol, tierCol].filter(Boolean).slice(0, 5);
+            if (previewCols.length > 0) {
+                let tbl = '<table><thead><tr>' + previewCols.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>';
+                rows.slice(0, 8).forEach(row => {
+                    tbl += '<tr>' + previewCols.map(c => '<td>' + (row[c] || '') + '</td>').join('') + '</tr>';
+                });
+                if (rows.length > 8) tbl += '<tr><td colspan="' + previewCols.length + '" style="color:var(--text-muted);font-style:italic">...and ' + (rows.length - 8) + ' more rows</td></tr>';
+                tbl += '</tbody></table>';
+                document.getElementById('rosterPreview').innerHTML = tbl;
+            }
+        }
+
+
+
+        function getGhostSpacesPromptText() {
+            if (!window._ghostSpaces || window._ghostSpaces <= 0) return '';
+            const confirmed = window._ghostTotal - window._ghostSpaces;
+            return [
+                '',
+                'ENROLLMENT NOTE - GHOST SPACES:',
+                'Confirmed enrolled students (on roster): ' + confirmed,
+                'Total planned enrollment (including ghost spaces): ' + window._ghostTotal,
+                'Ghost spaces (reserved for anticipated students): ' + window._ghostSpaces,
+                'IMPORTANT: Build the schedule to accommodate the full planned enrollment of ' + window._ghostTotal + ' students.',
+                'The ' + window._ghostSpaces + ' ghost spaces represent incoming transfers, late enrollees, or mid-year arrivals who are anticipated but not yet on the roster.',
+                'Allocate services, ELD groups, intervention slots, and classroom capacity proportionally to cover these seats.',
+                'Do not undersize service groups based only on confirmed roster count.',
+                ''
+            ].join('\n');
+        }
+
+        function showReconciliation(rosterCount, enteredCount) {
+            const box = document.getElementById('reconBox');
+            const desc = document.getElementById('reconDesc');
+            const opts = document.getElementById('reconOptions');
+            const ghost = document.getElementById('ghostInfo');
+            const warn = document.getElementById('reconOverWarning');
+            const title = document.getElementById('reconTitle');
+
+            // Reset
+            ghost.classList.remove('show');
+            warn.classList.remove('show');
+            opts.innerHTML = '';
+
+            box.classList.add('show');
+
+            if (rosterCount < enteredCount) {
+                // Roster is SMALLER — ghost spaces scenario
+                const ghostCount = enteredCount - rosterCount;
+                title.textContent = 'Roster is smaller than your expected enrollment';
+                desc.textContent = 'Your roster has ' + rosterCount + ' students but you entered ' + enteredCount + ' as your expected enrollment. The ' + ghostCount + ' extra seats can be treated as ghost spaces — reserved capacity for students not yet enrolled.';
+
+                opts.innerHTML =
+                    '<div class="recon-option" id="opt-ghost" onclick="selectReconOption('ghost', ' + enteredCount + ', ' + ghostCount + ')">' +
+                        '<div class="opt-number">' + enteredCount + '</div>' +
+                        '<div class="opt-label">Use expected enrollment</div>' +
+                        '<div class="opt-desc">Keep ' + ghostCount + ' ghost spaces for anticipated students. Recommended for planning ahead.</div>' +
+                    '</div>' +
+                    '<div class="recon-option" id="opt-roster" onclick="selectReconOption('roster', ' + rosterCount + ', 0)">' +
+                        '<div class="opt-number">' + rosterCount + '</div>' +
+                        '<div class="opt-label">Use roster count only</div>' +
+                        '<div class="opt-desc">Schedule only for confirmed enrolled students. No buffer seats.</div>' +
+                    '</div>';
+
+            } else {
+                // Roster is LARGER — over-enrollment scenario
+                const overCount = rosterCount - enteredCount;
+                title.textContent = 'Roster exceeds expected enrollment';
+                desc.textContent = 'Your roster has ' + rosterCount + ' students but you entered ' + enteredCount + ' in Section 1. This may include withdrawn students, duplicates, or enrollment has grown.';
+
+                opts.innerHTML =
+                    '<div class="recon-option" id="opt-roster" onclick="selectReconOption('over-roster', ' + rosterCount + ', 0)">' +
+                        '<div class="opt-number">' + rosterCount + '</div>' +
+                        '<div class="opt-label">Use roster count</div>' +
+                        '<div class="opt-desc">Update enrollment to match the full roster. Use this if enrollment has genuinely increased.</div>' +
+                    '</div>' +
+                    '<div class="recon-option" id="opt-entered" onclick="selectReconOption('over-entered', ' + enteredCount + ', 0)">' +
+                        '<div class="opt-number">' + enteredCount + '</div>' +
+                        '<div class="opt-label">Keep original number</div>' +
+                        '<div class="opt-desc">Treat the extra ' + overCount + ' roster rows as inactive (withdrawn, duplicates). Review your roster before generating.</div>' +
+                    '</div>';
+            }
+        }
+
+        function selectReconOption(type, enrollmentValue, ghostCount) {
+            // Highlight selected option
+            document.querySelectorAll('.recon-option').forEach(o => o.classList.remove('selected'));
+
+            if (type === 'ghost') {
+                document.getElementById('opt-ghost').classList.add('selected');
+                document.getElementById('enrollment').value = enrollmentValue;
+                document.getElementById('ghostCount').textContent = ghostCount + ' seats';
+                document.getElementById('ghostInfo').classList.add('show');
+                document.getElementById('reconOverWarning').classList.remove('show');
+                // Store ghost count for prompt injection
+                window._ghostSpaces = ghostCount;
+                window._ghostTotal = enrollmentValue;
+
+            } else if (type === 'roster') {
+                document.getElementById('opt-roster').classList.add('selected');
+                document.getElementById('enrollment').value = enrollmentValue;
+                document.getElementById('ghostInfo').classList.remove('show');
+                document.getElementById('reconOverWarning').classList.remove('show');
+                window._ghostSpaces = 0;
+                window._ghostTotal = 0;
+
+            } else if (type === 'over-roster') {
+                document.getElementById('opt-roster').classList.add('selected');
+                document.getElementById('enrollment').value = enrollmentValue;
+                document.getElementById('reconOverWarning').classList.add('show');
+                document.getElementById('ghostInfo').classList.remove('show');
+                window._ghostSpaces = 0;
+                window._ghostTotal = 0;
+
+            } else if (type === 'over-entered') {
+                document.getElementById('opt-entered').classList.add('selected');
+                document.getElementById('reconOverWarning').classList.add('show');
+                document.getElementById('ghostInfo').classList.remove('show');
+                window._ghostSpaces = 0;
+                window._ghostTotal = 0;
+            }
+        }
+
+        function clearRoster() {
+            rosterData = null;
+            document.getElementById('rosterFile').value = '';
+            document.getElementById('rosterSuccess').classList.remove('show');
+            document.getElementById('rosterPreview').innerHTML = '';
+        }
+
+        // ─── END ROSTER UPLOAD ───────────────────────────────────────────
+
+        // Initialize
+
+        updateProgress();
+    </script>
+</body>
+</html>
